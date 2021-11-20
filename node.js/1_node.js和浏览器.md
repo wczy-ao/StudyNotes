@@ -38,7 +38,7 @@
 
 #### 内核的工作过程
 
-![工作流程](D:\学习\前端\Node\node学习笔记\1-认识node.js和浏览器\images\渲染引擎的工作流程.jpg)
+![工作流程](D:\学习\StudyNotes\node.js\images\渲染引擎的工作流程.jpg)
 
 但是在这个执行过程中，HTML解析的时候遇到了JavaScript标签，应该怎么办呢？毕竟script是可以内嵌的
 
@@ -69,7 +69,7 @@
 
 > 工作流程：
 
-![](D:\学习\前端\Node\node学习笔记\1-认识node.js和浏览器\images\v8工作流程.jpg)
+![](D:\学习\StudyNotes\node.js\images\v8工作流程.jpg)
 
 - Parse模块会将JavaScript代码转换成AST（抽象语法树），这是因为解释器并不直接认识JavaScript代码；
   - 如果函数没有被调用，那么是不会被转换成AST的；
@@ -88,4 +88,4 @@
 
 > 区别
 
-![](D:\学习\前端\Node\node学习笔记\1-认识node.js和浏览器\images\js引擎和内核的区别.jpg)
+![](D:\学习\StudyNotes\node.js\images\js引擎和内核的区别.jpg)
