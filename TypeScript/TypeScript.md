@@ -29,7 +29,7 @@ tsc --version
 
 - 方式一：通过webpack，配置本地的TypeScript编译环境和开启一个本地服务，可以直接运行在浏览器上；
 
-  - [](https://mp.weixin.qq.com/s/wnL1l-ERjTDykWM76l4Ajw)
+  [ts的webpack搭建](https://mp.weixin.qq.com/s/wnL1l-ERjTDykWM76l4Ajw)
 
 - 方式二：通过ts-node库，为TypeScript的运行提供执行环境；
 
@@ -375,8 +375,7 @@ message = '1' // 不能将类型“"1"”分配给类型“"Hello World"”。
 
 ```tsx
 type FooFnType = () => void
-// 这个函数类型就是没有参数，如果一个函数有参数，那么定义函数类型的时候不可以省略参数
-// 并且返回类型可以定义，这个函数没有返回数据，所以是void
+// 这个函数类型就是没有参数，如果一个函数有参数，那么定义函数类型的时候不可以省略参数                              
 ```
 
 > this类型
@@ -726,5 +725,5 @@ getLength(["abc", "cba"])
 
 命名空间在TypeScript早期时，称之为内部模块，主要目的是将一个模块内部再进行作用域的划分，防止一些命名 冲突的问题。
 
-![](D:\学习\学习笔记\StudyNotes\TypeScript\image\11.jpg)
+![](image/11.jpg)
 
