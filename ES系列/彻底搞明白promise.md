@@ -1,17 +1,3 @@
-promise实例   ok
-
-resolve参数是一个promise实例 ok
-
-then
-
-catch：返回promise实例
-
-先执行then还是先执行catch、
-
-race的参数不是promise实例
-
-resolve
-
 # 彻底搞明白Promise
 
 ## Promise是什么
