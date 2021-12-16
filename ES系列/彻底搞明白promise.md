@@ -485,3 +485,251 @@ p.then(null, function (s) {
 // 出错了
 ```
 
+
+
+
+
+## Promise重写
+
+### 第一版
+
+> `resolve`一个值，`rejected`一个错误或者直接扔出一个错误
+
+`index.js`
+
+```js
+const MyPromise = require("./MyPromise");
+let promise1 = new MyPromise((resolve, reject) => {
+  // resolve('proomise1')
+  // reject('error')
+  throw new Error('err')
+})
+promise1.then(value => {
+    console.log(value);
+  }, (reason => {
+    console.log(reason);
+  })
+)
+```
+
+`MyPromise.js`
+
+> 用 try catch 避免因错误阻拦后面程序执行
+
+```js
+const PENDDING = 'PENDDING',
+      FULFILLED = 'FULFILLED',
+      REJECTED = 'REJECTED'
+
+ class Mypromsie {
+     constructor(executor){
+        this.status = PENDDING
+        this.value = undefined
+        this.reason = undefined
+
+        const resolve = (value) => {
+            this.status = FULFILLED
+            this.value = value
+        }
+
+        const rejected = (reason)=> {
+            this.status = REJECTED
+            this.reason = reason
+        }
+
+        try {
+            executor(resolve,rejected)
+        } catch (error) {
+            rejected(error)
+        }
+     }
+
+     then(res,rej){
+         if(this.status === FULFILLED) {
+             res(this.value)
+         }
+         if(this.status === REJECTED){
+             rej(this.reason)
+         }
+     }
+ }
+
+ module.exports = Mypromsie
+```
+
+
+
+### 第二版
+
+> 延迟执行 `resolve`
+
+`index.js`
+
+```js
+const MyPromise = require("./MyPromise");
+let promise1 = new MyPromise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('proomise1')
+  }, 2000);
+})
+promise1.then(value => {
+    console.log(value);
+  }, (reason => {
+    console.log(reason);
+  })
+)
+```
+
+`MyPromise.js`
+
+> 发布---订阅模式
+>
+> 通过两个数组，在pendding的时候把宏任务直接添加进两个数组中，等回调事件的时候再从两个数组中去执行
+
+```js
+const PENDDING = 'PENDDING',
+      FULFILLED = 'FULFILLED',
+      REJECTED = 'REJECTED'
+
+ class Mypromsie {
+     constructor(executor){
+        this.status = PENDDING
+        this.value = undefined
+        this.reason = undefined
+
+        this.onResolvedCallbacks = []
+        this.onRejectedCallbacks = []
+        const resolve = (value) => {
+            this.status = FULFILLED
+            this.value = value
+            // 发布
+            this.onResolvedCallbacks.forEach(fn=> fn())
+        }
+
+        const rejected = (reason)=> {
+            this.status = REJECTED
+            this.reason = reason
+            // 发布
+            this.onRejectedCallbacks.forEach(fn=> fn())
+        }
+
+        try {
+            executor(resolve,rejected)
+        } catch (error) {
+            rejected(error)
+        }
+     }
+
+     then(res,rej){
+         if(this.status === FULFILLED) {
+             res(this.value)
+         }
+         if(this.status === REJECTED){
+             rej(this.reason)
+         }
+         if(this.status === PENDDING) {
+             // 订阅
+             this.onResolvedCallbacks.push(()=>{
+                res(this.value)
+             })
+             // 订阅
+             this.onRejectedCallbacks.push(()=>{
+                rej(this.reason)
+            })
+         }
+     }
+ }
+
+ module.exports = Mypromsie
+```
+
+### 终极版
+
+> 我们前面两版都是对`then`的使用都只是打印，但是`then`我们是知道它返回的是一个`promise`；所以终极版就是实现这个`then`的返回
+
+`MyPromise.js`
+
+> 返回一个promise
+
+```js
+then(res, rej) {
+  let promise2 = new MyPromise((resolve, reject) => {
+  	if (this.status === FULFILLED) {
+      res(this.value);
+    }
+    if (this.status === REJECTED) {
+      rej(this.reason);
+    }
+    if (this.status === PENDDING) {
+      this.onResolvedCallbacks.push(() => {
+        res(this.value);
+      });
+      this.onRejectedCallbacks.push(() => {
+        rej(this.reason);
+      });
+    }
+  });
+
+    return promise2;
+  }
+```
+
+`index.js`
+
+```js
+const Mypromsie = require("./bbb");
+const MyPromise = require("./Promise5");
+let promise1 = new MyPromise((resolve, reject) => {
+  resolve("proomise1");
+});
+
+let promise2 = promise1.then(
+  (value) => {
+    // 第一种
+    // return promise2
+
+    // 第二种
+    // return '2222'
+
+    // 第三种
+    // return new MyPromise((resolve,reject)=>{
+    //   resolve('promise2')
+    // })
+
+    // 第四种
+    // return new MyPromise((resolve,reject)=>{
+    //   setTimeout(() => {
+    //     resolve('异步')
+    //   }, 2000);
+    // })
+
+    // 第五种
+    // return new MyPromise((resolve, reject) => {
+    //   reject('err')
+    //   resolve("promise2");
+    // });
+
+    // 第六种
+    return new Mypromsie((resolve,reject)=>{
+      setTimeout(() => {
+        resolve(new MyPromise((resolve,reject)=>{
+          resolve('0000')
+        }))
+      }, 2000);
+    }))
+  },
+  (reason) => {
+    return reason;
+  }
+);
+// 第七种
+promise2.then().then().then().then().then(
+  (value) => {
+    console.log(value);
+  },
+  (reason) => {
+    console.log(reason);
+  }
+);
+```
+
