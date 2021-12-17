@@ -598,7 +598,7 @@ const PENDDING = 'PENDDING',
         this.reason = undefined
 
         this.onResolvedCallbacks = []
-        this.onRejectedCallbacks = []
+        this.rejCallbacks = []
         const resolve = (value) => {
             this.status = FULFILLED
             this.value = value
@@ -610,7 +610,7 @@ const PENDDING = 'PENDDING',
             this.status = REJECTED
             this.reason = reason
             // 发布
-            this.onRejectedCallbacks.forEach(fn=> fn())
+            this.rejCallbacks.forEach(fn=> fn())
         }
 
         try {
@@ -633,7 +633,7 @@ const PENDDING = 'PENDDING',
                 res(this.value)
              })
              // 订阅
-             this.onRejectedCallbacks.push(()=>{
+             this.rejCallbacks.push(()=>{
                 rej(this.reason)
             })
          }
@@ -664,14 +664,14 @@ then(res, rej) {
       this.onResolvedCallbacks.push(() => {
         res(this.value);
       });
-      this.onRejectedCallbacks.push(() => {
+      this.rejCallbacks.push(() => {
         rej(this.reason);
       });
     }
   });
 
-    return promise2;
-  }
+  return promise2;
+}
 ```
 
 `index.js`
@@ -731,5 +731,270 @@ promise2.then().then().then().then().then(
     console.log(reason);
   }
 );
+```
+
+`Mypromise.js`
+
+```js
+  then(res, rej) {
+    let promise2 = new MyPromise((resolve, reject) => {
+      if (this.status === FULFILLED) {
+        setTimeout(() => {
+            // 这里通过异步的方式获取promise2
+          try {
+            let x = res(this.value);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
+        }, 0);
+      }
+    });
+      
+    return promise2;
+  }
+```
+
+`resolvePromise.js`
+
+```js
+function resolvePromise(promise2, x, resolve, reject) {
+	console.log(x)
+}
+  /**
+   *  Mypromsie {
+        status: 'FULFILLED',
+        value: 'promise2',
+        reason: undefined,
+        onResolvedCallbacks: [],
+        rejCallbacks: []
+      }
+   */
+```
+
+接下来就是`resolvePromise`方法处理边界情况
+
+1.  x 是第一种情况
+
+   ```js
+   if (promise2 === x) {
+         return reject(new TypeError('Chaining cycle detected for promise #<MyPromise>'))
+   }
+   ```
+
+2. x 是第二、三种情况
+
+   ```js
+     if ((typeof x === 'object' && x !== null) || typeof x === 'function') {
+       try {
+           // 第三种情况
+         	// x 可能是对象或者函数，如果是promise就一定有then，所以在try catch 中判断
+         let then = x.then; // throw error
+   
+         if (typeof then === 'function') { // Promise
+           then.call(x, (y) => {
+             resolvePromise(promise2, y, resolve, reject);  // 递归调用
+           }, (r) => {
+             reject(r);
+           })
+         } else {
+           resolve(x);
+         }
+       } catch (e) {
+         if (called) return;
+         called = true;
+         reject(e);
+       }
+     } else {
+         // 第二种情况
+       resolve(x);
+     }
+   ```
+
+3.  x 是第五，六种情况
+
+   ```js
+   // 增加一个变量，执行了resolve或者reject，变量状态就更改
+     let called = false;
+   
+     if ((typeof x === 'object' && x !== null) || typeof x === 'function') {
+       try {
+         // x 可能是对象或者函数，如果是promise就一定有then，所以在try catch 中判断
+         let then = x.then; // throw error
+   
+         if (typeof then === 'function') { // Promise
+           then.call(x, (y) => {
+             if (called) return;
+             called = true;
+             resolvePromise(promise2, y, resolve, reject);  // 第六种情况---递归调用
+           }, (r) => {
+             if (called) return;
+             called = true;
+             reject(r);
+           })
+         } else {
+           resolve(x);
+         }
+       } catch (e) {
+         if (called) return;
+         called = true;
+         reject(e);
+       }
+     } else {
+       resolve(x);
+     }
+   ```
+
+4. x 是第四种情况
+
+   > 这个我们在`Mypromise`种已经处理了，通过异步来获取到`promise2`对象
+
+5. x 是第七种情况
+
+   在`Mypromise`的`then`方法种判断是否有参数，没有参数就创造一个函数
+
+   ```js
+   res = typeof res === 'function' ? res : value => value;
+   rej = typeof rej === 'function' ? rej : reason => { throw reason };
+   ```
+
+
+
+最终的`Mypromise`
+
+```js
+const PENDING = 'PENDING',
+  FULFILLED = 'FULFILLED',
+  REJECTED = 'REJECTED';
+
+function resolvePromise(promise2, x, resolve, reject) {
+  console.log(x);
+  if (promise2 === x) {
+    // 在then方法中直接返回同一个实例
+    return reject(new TypeError('Chaining cycle detected for promise #<MyPromise>'))
+  }
+
+  let called = false;
+
+  if ((typeof x === 'object' && x !== null) || typeof x === 'function') {
+    try {
+      // x 可能是对象或者函数，如果是promise就一定有then，所以在try catch 中判断
+      let then = x.then; // throw error
+
+      if (typeof then === 'function') { // Promise
+        then.call(x, (y) => {
+          if (called) return;
+          called = true;
+          resolvePromise(promise2, y, resolve, reject);  // 递归调用
+        }, (r) => {
+          if (called) return;
+          called = true;
+          reject(r);
+        })
+      } else {
+        resolve(x);
+      }
+    } catch (e) {
+      if (called) return;
+      called = true;
+      reject(e);
+    }
+  } else {
+    resolve(x);
+  }
+}
+
+class MyPromise {
+  constructor(executor) {
+    this.status = PENDING;
+    this.value = undefined;
+    this.reason = undefined;
+
+    this.onResolveCallbacks = [];
+    this.rejCallbacks = [];
+
+    const resolve = (value) => {
+      if (this.status === PENDING) {
+        this.status = FULFILLED;
+        this.value = value;
+        // 发布
+        this.onResolveCallbacks.forEach((fn) => fn());
+      }
+    }
+
+    const reject = (reason) => {
+      if (this.status === PENDING) {
+        this.status = REJECTED;
+        this.reason = reason;
+        // 发布
+        this.rejCallbacks.forEach((fn) => fn());
+      }
+    }
+
+    try {
+      executor(resolve, reject);
+    } catch (error) {
+      reject(error);
+    }
+  }
+
+  // x 普通值  promise
+  then(res, rej) {
+    res = typeof res === 'function' ? res : value => value;
+    rej = typeof rej === 'function' ? rej : reason => { throw reason };
+
+    let promise2 = new MyPromise((resolve, reject) => {
+      if (this.status === FULFILLED) {
+        setTimeout(() => {
+          try {
+            let x = res(this.value);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
+        }, 0);
+      }
+
+      if (this.status === REJECTED) {
+        setTimeout(() => {
+          try {
+            let x = rej(this.reason);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (e) {
+            reject(e);
+          }
+        }, 0);
+      }
+
+      if (this.status === PENDING) {
+        // 订阅
+        this.onResolveCallbacks.push(() => {
+          setTimeout(() => {
+            try {
+              let x = res(this.value);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (e) {
+              reject(e);
+            }
+          }, 0);
+        });
+        this.rejCallbacks.push(() => {
+          setTimeout(() => {
+            try {
+              let x = rej(this.reason);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (e) {
+              reject(e);
+            }
+          }, 0);
+        });
+      }
+    });
+
+    return promise2;
+  }
+}
+
+module.exports = MyPromise;
 ```
 
