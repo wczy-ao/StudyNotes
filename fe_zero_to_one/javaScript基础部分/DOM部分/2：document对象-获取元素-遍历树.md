@@ -75,7 +75,7 @@ var box = document.getElementsByName('box');
 
 
 
-## 遍历节点树
+## 遍历元素节点树
 
 > 节点树不是元素，节点包含元素 -->> 元素节点 == DOM元素
 
@@ -105,4 +105,22 @@ var a = document.getElementsByTagName('a')[0];
 - DocumnetFragment = 11
 
 
+
+### `firstChild`
+
+第一个节点（并不一定是元素节点）
+
+### `lastChild`
+
+最后一个节点（并不一定是元素节点）
+
+
+
+### 兼容问题
+
+- parentElement 父元素 遍历到顶层是HTML元素 IE9及以下不支持
+- childElementCount = children.length IE9及以下不支持
+- firstElementChild lastElementChild  IE9及以下不支持
+- nextElementSibling previousElementSibling   IE9及以下不支持
+- children 子元素  IE7及以下不支持
 
