@@ -2,6 +2,10 @@
 
 [掘金-神三元](https://juejin.cn/post/6844904100035821575#heading-7)
 
+[TOC]
+
+
+
 ## HTTP的含义
 
 **HTTP：**HyperText Transfer Protocol 超文本传输协议
@@ -431,7 +435,7 @@ Cookie 的有效期可以通过**Expires**和**Max-Age**两个属性来设置。
 3. 安全缺陷。由于 Cookie 以纯文本的形式在浏览器和服务器中传递，很容易被非法用户截获，然后进行一系列的篡改，在 Cookie 的有效期内重新发送给服务器，这是相当危险的。另外，在`HttpOnly`为 false 的情况下，Cookie 信息能直接通过 JS 脚本来读取
 
 
-   
+
    
 
 4. 
