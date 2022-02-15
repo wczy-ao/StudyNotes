@@ -1,0 +1,1 @@
+https://javascript.ruanyifeng.com/bom/cookie.html
