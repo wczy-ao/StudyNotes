@@ -146,6 +146,22 @@ function test(data) {
         return test(data - 1) + test(data - 2)
     }
 }
+
+// 优化
+function fib(num) {
+    if (num == 0) return 0
+    if (num ==2 || num ==1) return 1
+    let prev = 1,
+        curr = 1;
+    for (let i = 3; i <= num; i++ ) {
+        let sum = prev + curr
+        prev = curr
+        curr = sum
+    }
+    return curr
+}
+
+console.log(fib(10));
 ```
 
 ### AO与VO
