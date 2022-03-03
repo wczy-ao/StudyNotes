@@ -203,3 +203,192 @@ obj.goo();
 
 3. 这就是为什么 ES6 的继承必须先调用`super()`方法，因为这一步会生成一个继承父类的`this`对象，没有这一步就无法继承父类。
 
+
+
+## class的babel转译
+
+```js
+class Parent {
+  constructor(name) {
+    this.name = name || "Parent";
+    this.age = 21;
+  }
+  sayName() {
+    console.log(this.name);
+  }
+
+  saySth(str) {
+    console.log(str);
+  }
+
+  static staticMethod(str) {
+    console.log(str);
+  }
+}
+
+
+const p = new Parent("Parenttt");
+```
+
+转译后的class
+
+```js
+function _classCallCheck(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+function _defineProperties(target, props) {
+  for (var i = 0; i < props.length; i++) {
+    var descriptor = props[i];
+      // 不可遍历
+    descriptor.enumerable = descriptor.enumerable || false;
+    descriptor.configurable = true;
+    if ("value" in descriptor) descriptor.writable = true;
+    Object.defineProperty(target, descriptor.key, descriptor);
+  }
+}
+
+function _createClass(Constructor, protoProps, staticProps) {
+  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+  if (staticProps) _defineProperties(Constructor, staticProps);
+  Object.defineProperty(Constructor, "prototype", { writable: false });
+  return Constructor;
+}
+//   1：Parent是一个IIFE，返回的是一个函数，执行 new Parent() 就是内部的这个Partent
+var Parent = /*#__PURE__*/ (function () {
+  function Parent(name) {
+      // 检查是不是 new 执行的
+    _classCallCheck(this, Parent);
+
+    this.name = name || "Parent";
+    this.age = 21;
+  }
+//   2：执行 _createClass 返回的构造函数，很明显就是 函数变成了 类 做了一些操作
+  _createClass(
+    Parent,
+    [
+      {
+        key: "sayName",
+        value: function sayName() {
+          console.log(this.name);
+        }
+      },
+      {
+        key: "saySth",
+        value: function saySth(str) {
+          console.log(str);
+        }
+      }
+    ],
+    [
+      {
+        key: "staticMethod",
+        value: function staticMethod(str) {
+          console.log(str);
+        }
+      }
+    ]
+  );
+
+  return Parent;
+})();
+
+var p = new Parent("Parenttt");
+```
+
+1. Parent是一个IIFE，返回的是一个函数，执行 new Parent() 就是内部的这个Partent
+2. 执行 _createClass 返回的是构造函数，很明显就是 函数变成了 类 做了一些操作
+   - 第一个参数 Parent 就是构造函数
+   - 第二个参数类上的方法
+   - 第三个参数类上的静态方法
+3. 最后执行 Parent函数，_classCallCheck先判断是不是new 执行的，其他的和 ES5的是一样的
+
+
+
+
+
+## 修饰器
+
+为对象添加新的功能，不改变原有的结构和功能
+
+```
+符号：@ 
+
+```
+
+修饰类
+
+```js
+@testable
+class Person{
+	constructor(name='lisi', age='19'){
+  	this.name = name;
+    this.age = age;
+  }
+  say(){
+  	console.log('hello world')
+  }
+  eat(){
+  	console.log('eat')
+  }
+}
+var person = new Person();
+
+function testable(target){
+	console.log('target', target) // target 就是 Person
+}
+```
+
+修饰属性
+
+```js
+class Person{
+	constructor(name='lisi', age='19'){
+  	this.name = name;
+    this.age = age;
+  }
+  @readOnly
+  say(){
+  	console.log('hello world')
+  }
+  eat(){
+  	console.log('eat')
+  }
+}
+function readOnly(target, name, descriptor){
+	console.log(target, name, descriptor)
+  descriptor.writable = false
+}
+
+var person = new Person()
+person.say()
+```
+
+埋点分析
+
+```js
+var log = (type) => {
+	return function(target, name, descriptor){
+  	let src_method = descriptor.value
+    descriptor.value = (...arg) => {
+    	src_method.apply(target, arg);
+      console.log(type);
+    }
+  }
+}
+
+class AD{
+  @log('show')
+	show(){
+  	console.log('ad show')
+  }
+  @log('click')
+  click(){
+  	console.log('ad click')
+  }
+}
+
+```
+
