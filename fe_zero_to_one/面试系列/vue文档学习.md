@@ -96,6 +96,75 @@ v.$mount("#root"); //第二种写法
 
 #### 5：render函数
 
+`render` 函数的作用替代 `template` 模板
+
+```vue
+// App.vue
+
+<script>
+export default {
+  name: 'App',
+  render(createElement) {
+    return createElement(
+      'h1',  // 标签名称
+      this.message
+    )
+  },
+  data() {
+    return {
+      message: "hello world",
+    }
+  },
+}
+</script>
+
+<style>
+</style>
+
+```
+
+##### 深入 render
+
+render函数返回`createElement` 执行的结果，
+
+`createElement` 返回的不是一个真实DOM 元素。而是一个“**VNode**”。虚拟节点它所包含的信息会告诉 Vue 页面上需要渲染什么样的节点，包括及其子节点的描述信息。
+
+```js
+new Vue({
+  render: (h) => h(App),
+}).$mount("#app");
+```
+
+将 `h` 作为 `createElement` 的别名是 Vue 生态系统中的一个通用惯例，实际上也是 JSX 所要求的。
+
+##### `createElement` 接受的参数：
+
+三个参数：
+
+1. 必填：一个 HTML 标签名、组件选项对象
+2. 可选：属性
+3. 子节点
+
+```js
+export default {
+  name: 'App',
+  render(createElement) {
+    return createElement(
+      HelloWorld,  // 标签名称
+      { attrs: { class: 'test' } }, // 属性
+      [createElement('h1', '一则头条'),]
+    )
+  },
+  data() {
+    return {
+      message: "hello world",
+    }
+  },
+}
+```
+
+
+
 #### 6：v-if与v-for 一起用
 
 [v-if与v-for 一起用](https://cn.vuejs.org/v2/style-guide/#%E9%81%BF%E5%85%8D-v-if-%E5%92%8C-v-for-%E7%94%A8%E5%9C%A8%E4%B8%80%E8%B5%B7%E5%BF%85%E8%A6%81)
@@ -627,5 +696,38 @@ new Vue({
 
 
 
-#### 16：自定义指令
+#### 16：[自定义指令](https://cn.vuejs.org/v2/guide/custom-directive.html)
 
+类似于v-bind指令一样，自定义一个指令实现功能
+
+```html
+<input v-focus>
+```
+
+```js
+// 注册一个全局自定义指令 `v-focus`
+Vue.directive('focus', {
+  // 当被绑定的元素插入到 DOM 中时……
+  inserted: function (el) {
+    // 聚焦元素
+    el.focus()
+  }
+})
+// 局部
+directives: {
+  focus: {
+    // 指令的定义
+    inserted: function (el) {
+      el.focus()
+    }
+  }
+}
+```
+
+#### 17：插件
+
+通过全局方法 `Vue.use()` 使用插件。它需要在你调用 `new Vue()` 启动应用之前完成：
+
+Vue.js 的插件应该暴露一个 `install` 方法。这个方法的第一个参数是 `Vue` 构造器，第二个参数是一个可选的选项对象：
+
+[具体用法](https://github.com/wczy-ao/StudyNotes/blob/main/Vue/vue%E6%8A%80%E6%9C%AF%E7%82%B9.md)
