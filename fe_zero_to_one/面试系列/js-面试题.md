@@ -24,3 +24,9 @@
    ```
 
    
+
+## 浏览器与nodejs的event loop
+
+[**不要混淆nodejs和浏览器中的event loop**](https://cnodejs.org/topic/5a9108d78d6e16e56bb80882)
+
+[**浏览器与Node的事件循环(Event Loop)有何区别?**](https://zhuanlan.zhihu.com/p/54882306)
