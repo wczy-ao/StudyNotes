@@ -505,3 +505,451 @@ Vue.prototype._render = function (): VNode {
 
 ### createElement
 
+`createElement`创建`Vnode`，`render`函数也返回`Vnode`，其实执行`render`函数就是在执行`createElement`函数，`src/core/vdom/create-element.js`
+
+```js
+export function initRender (vm: Component) {
+  // ...
+  // bind the createElement fn to this instance
+  // so that we get proper render context inside it.
+  // args order: tag, data, children, normalizationType, alwaysNormalize
+  // internal version is used by render functions compiled from templates
+  vm._c = (a, b, c, d) => createElement(vm, a, b, c, d, false)
+  // normalization is always applied for the public version, used in
+  // user-written render functions.
+  vm.$createElement = (a, b, c, d) => createElement(vm, a, b, c, d, true)
+}
+```
+
+
+
+- 暂时不考虑data是多层的情况
+- 执行`createElement`就是`_createElement`
+
+```js
+//  * ① createElement(context, 'div', {}, '文字')
+//  * ② createElement(context, 'div', {}, [])
+//  * ③ createElement(context, 'div', {}, h())
+
+export function createElement (
+  context: Component,
+  tag: any,
+  data: any,
+  children: any,
+  normalizationType: any,
+  alwaysNormalize: boolean
+): VNode | Array<VNode> {
+  if (Array.isArray(data) || isPrimitive(data)) {
+    normalizationType = children
+    children = data
+    data = undefined
+  }
+  if (isTrue(alwaysNormalize)) {
+    normalizationType = ALWAYS_NORMALIZE
+  }
+  return _createElement(context, tag, data, children, normalizationType)
+}
+```
+
+
+
+- `_createElement`处理的边界情况比较多，主要看两个
+
+- `children` 的规范化
+
+  ```javascript
+  if (normalizationType === ALWAYS_NORMALIZE) {
+      children = normalizeChildren(children)
+   } else if (normalizationType === SIMPLE_NORMALIZE) {
+      children = simpleNormalizeChildren(children)
+   }
+  ```
+
+  - 根据 `normalizationType` 的不同，调用了 `normalizeChildren(children)` 和 `simpleNormalizeChildren(children)` 方法
+  - `simpleNormalizeChildren` 方法调用场景是 `render` 函数是编译生成的
+  - `normalizeChildren` 方法的调用场景有 2 种，
+    - 一个场景是 `render` 函数是用户手写的，当 `children` 只有一个节点的时候，Vue.js 从接口层面允许用户把 `children` 写成基础类型用来创建单个简单的文本节点，这种情况会调用 `createTextVNode` 创建一个文本节点的 VNode
+    - 另一个场景是当编译 `slot`、`v-for` 的时候会产生嵌套数组的情况，会调用 `normalizeArrayChildren` 方法
+
+- `VNode` 的创建
+
+  ```js
+  let vnode, ns
+  if (typeof tag === 'string') {
+    let Ctor
+    ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag)
+    if (config.isReservedTag(tag)) {
+      // platform built-in elements
+      vnode = new VNode(
+        config.parsePlatformTagName(tag), data, children,
+        undefined, undefined, context
+      )
+    } else if (isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
+      // component
+      vnode = createComponent(Ctor, data, context, children, tag)
+    } else {
+      // unknown or unlisted namespaced elements
+      // check at runtime because it may get assigned a namespace when its
+      // parent normalizes children
+      vnode = new VNode(
+        tag, data, children,
+        undefined, undefined, context
+      )
+    }
+  } else {
+    // direct component options / constructor
+    vnode = createComponent(tag, data, context, children)
+  }
+  ```
+
+  - 先对 `tag` 做判断，如果是 `string` 类型，则接着判断如果是内置的一些节点，则直接创建一个普通 VNode
+  - 如果是为已注册的组件名，则通过 `createComponent` 创建一个组件类型的 VNode，否则创建一个未知的标签的 VNode
+  - 如果是 `tag` 一个 `Component` 类型，则直接调用 `createComponent` 创建一个组件类型的 VNode 节点
+
+```javascript
+export function _createElement (
+  context: Component,
+  tag?: string | Class<Component> | Function | Object,
+  data?: VNodeData,
+  children?: any,
+  normalizationType?: number
+): VNode | Array<VNode> {
+  if (isDef(data) && isDef((data: any).__ob__)) {
+    process.env.NODE_ENV !== 'production' && warn(
+      `Avoid using observed data object as vnode data: ${JSON.stringify(data)}\n` +
+      'Always create fresh vnode data objects in each render!',
+      context
+    )
+    return createEmptyVNode()
+  }
+  // object syntax in v-bind
+  if (isDef(data) && isDef(data.is)) {
+    tag = data.is
+  }
+  if (!tag) {
+    // in case of component :is set to falsy value
+    return createEmptyVNode()
+  }
+  // warn against non-primitive key
+  if (process.env.NODE_ENV !== 'production' &&
+    isDef(data) && isDef(data.key) && !isPrimitive(data.key)
+  ) {
+    if (!__WEEX__ || !('@binding' in data.key)) {
+      warn(
+        'Avoid using non-primitive value as key, ' +
+        'use string/number value instead.',
+        context
+      )
+    }
+  }
+  // support single function children as default scoped slot
+  if (Array.isArray(children) &&
+    typeof children[0] === 'function'
+  ) {
+    data = data || {}
+    data.scopedSlots = { default: children[0] }
+    children.length = 0
+  }
+  if (normalizationType === ALWAYS_NORMALIZE) {
+    children = normalizeChildren(children)
+  } else if (normalizationType === SIMPLE_NORMALIZE) {
+    children = simpleNormalizeChildren(children)
+  }
+  let vnode, ns
+  if (typeof tag === 'string') {
+    let Ctor
+    ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag)
+    if (config.isReservedTag(tag)) {
+      // platform built-in elements
+      if (process.env.NODE_ENV !== 'production' && isDef(data) && isDef(data.nativeOn) && data.tag !== 'component') {
+        warn(
+          `The .native modifier for v-on is only valid on components but it was used on <${tag}>.`,
+          context
+        )
+      }
+      vnode = new VNode(
+        config.parsePlatformTagName(tag), data, children,
+        undefined, undefined, context
+      )
+    } else if ((!data || !data.pre) && isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
+      // component
+      vnode = createComponent(Ctor, data, context, children, tag)
+    } else {
+      // unknown or unlisted namespaced elements
+      // check at runtime because it may get assigned a namespace when its
+      // parent normalizes children
+      vnode = new VNode(
+        tag, data, children,
+        undefined, undefined, context
+      )
+    }
+  } else {
+    // direct component options / constructor
+    vnode = createComponent(tag, data, context, children)
+  }
+  if (Array.isArray(vnode)) {
+    return vnode
+  } else if (isDef(vnode)) {
+    if (isDef(ns)) applyNS(vnode, ns)
+    if (isDef(data)) registerDeepBindings(data)
+    return vnode
+  } else {
+    return createEmptyVNode()
+  }
+}
+```
+
+
+
+
+
+#### 总结
+
+ `createElement` 创建 VNode 的过程，每个 VNode 有 `children`，`children` 每个元素也是一个 VNode，这样就形成了一个 VNode Tree，它很好的描述了我们的 DOM Tree。
+
+回到 `mountComponent` 函数的过程，我们已经知道 `vm._render` 是如何创建了一个 VNode，接下来就是要把这个 VNode 渲染成一个真实的 DOM 并渲染出来，这个过程是通过 `vm._update` 完成的，接下来分析一下这个过程。
+
+
+
+
+
+### update
+
+Vue 的 `_update` 是实例的一个私有方法，它被调用的时机有 2 个，一个是首次渲染，一个是数据更新的时候；我们这一章节只分析首次渲染部分，`_update` 方法的作用是把 VNode 渲染成真实的 DOM，它的定义在 `src/core/instance/lifecycle.js` 中：
+
+注意：`_update` 不是生命周期钩子函数，那个是 `updated`
+
+```js
+Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
+  const vm: Component = this
+  const prevEl = vm.$el
+  const prevVnode = vm._vnode
+  const prevActiveInstance = activeInstance
+  activeInstance = vm
+  vm._vnode = vnode
+  if (!prevVnode) {
+    // initial render
+    vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
+  } else {
+    // updates
+    vm.$el = vm.__patch__(prevVnode, vnode)
+  }
+}
+```
+
+
+
+- _update 的核心就是调用 vm.__patch__ 方法
+
+- 这个方法在不同的平台，比如 web 和 weex 上的定义是不一样的，在 web 平台中它的定义在 `src/platforms/web/runtime/index.js` 中：
+
+  ```
+  Vue.prototype.__patch__ = inBrowser ? patch : noop
+  ```
+
+  
+
+- `patch` 方法，它的定义在 `src/platforms/web/runtime/patch.js`中，`createPatchFunction` 返回了一个函数，这个函数就是 `patch` 函数
+
+  ```js
+  // nodeOps 表示对 “平台 DOM” 的一些操作方法，modules 表示平台的一些模块，
+  export const patch: Function = createPatchFunction({ nodeOps, modules })
+  ```
+
+
+
+- patch 方法本身，它接收 4个参数
+  - `oldVnode` 表示旧的 `VNode` 节点，它也可以不存在或者是一个 `DOM` 对象；
+  - `vnode` 表示执行 `_render` 后返回的 `VNode` 的节点；
+  - `hydrating` 表示是否是服务端渲染；
+  - `removeOnly` 是给 `transition-group` 用的，之后会介绍。
+- 我们传入的 `oldVnode` 实际上是一个 DOM container，所以 `isRealElement` 为 true
+- `emptyNodeAt` 方法把 `oldVnode` 转换成 `VNode` 对象，然后再调用 `createElm` 方法
+
+```js
+const hooks = ['create', 'activate', 'update', 'remove', 'destroy']
+
+export function createPatchFunction (backend) {
+ // ....
+
+  return function patch (oldVnode, vnode, hydrating, removeOnly) {
+// ....
+      const isRealElement = isDef(oldVnode.nodeType)
+      if (!isRealElement && sameVnode(oldVnode, vnode)) {
+        // patch existing root node
+        patchVnode(oldVnode, vnode, insertedVnodeQueue, removeOnly)
+      } else {
+        if (isRealElement) {
+          // ...
+          oldVnode = emptyNodeAt(oldVnode)
+        }
+
+        // replacing existing element
+        const oldElm = oldVnode.elm
+        const parentElm = nodeOps.parentNode(oldElm)
+
+        // create new node
+        createElm(
+          vnode,
+          insertedVnodeQueue,
+          // extremely rare edge case: do not insert if old element is in a
+          // leaving transition. Only happens when combining transition +
+          // keep-alive + HOCs. (#4590)
+          oldElm._leaveCb ? null : parentElm,
+          nodeOps.nextSibling(oldElm)
+        )
+      }
+    }
+
+    invokeInsertHook(vnode, insertedVnodeQueue, isInitialPatch)
+    return vnode.elm
+  }
+}
+```
+
+
+
+
+
+`createElm`
+
+[手动实现patch](https://github.com/wczy-ao/vue-source/tree/main/VNode%E5%92%8CDiff%E7%AE%97%E6%B3%95#%E6%89%8B%E5%8A%A8%E5%AE%9E%E7%8E%B0%E4%BD%8E%E7%89%88%E6%9C%ACpatch)
+
+`createElm` 的作用是通过虚拟节点创建真实的 DOM 并插入到它的父节点中
+
+```js
+function createElm (
+  vnode,
+  insertedVnodeQueue,
+  parentElm,
+  refElm,
+  nested,
+  ownerArray,
+  index
+) {
+  if (isDef(vnode.elm) && isDef(ownerArray)) {
+    // This vnode was used in a previous render!
+    // now it's used as a new node, overwriting its elm would cause
+    // potential patch errors down the road when it's used as an insertion
+    // reference node. Instead, we clone the node on-demand before creating
+    // associated DOM element for it.
+    vnode = ownerArray[index] = cloneVNode(vnode)
+  }
+
+  vnode.isRootInsert = !nested // for transition enter check
+  if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
+    return
+  }
+
+  const data = vnode.data
+  const children = vnode.children
+  const tag = vnode.tag
+  if (isDef(tag)) {
+    if (process.env.NODE_ENV !== 'production') {
+      if (data && data.pre) {
+        creatingElmInVPre++
+      }
+      if (isUnknownElement(vnode, creatingElmInVPre)) {
+        warn(
+          'Unknown custom element: <' + tag + '> - did you ' +
+          'register the component correctly? For recursive components, ' +
+          'make sure to provide the "name" option.',
+          vnode.context
+        )
+      }
+    }
+
+    vnode.elm = vnode.ns
+      ? nodeOps.createElementNS(vnode.ns, tag)
+      : nodeOps.createElement(tag, vnode)
+    setScope(vnode)
+
+    /* istanbul ignore if */
+    if (__WEEX__) {
+      // ...
+    } else {
+      createChildren(vnode, children, insertedVnodeQueue)
+      if (isDef(data)) {
+        invokeCreateHooks(vnode, insertedVnodeQueue)
+      }
+      insert(parentElm, vnode.elm, refElm)
+    }
+
+    if (process.env.NODE_ENV !== 'production' && data && data.pre) {
+      creatingElmInVPre--
+    }
+  } else if (isTrue(vnode.isComment)) {
+    vnode.elm = nodeOps.createComment(vnode.text)
+    insert(parentElm, vnode.elm, refElm)
+  } else {
+    vnode.elm = nodeOps.createTextNode(vnode.text)
+    insert(parentElm, vnode.elm, refElm)
+  }
+}
+```
+
+
+
+`createChildren` 方法去创建子元素
+
+- 直到最后是文本节点，然后插入进去
+- `createChildren` 的逻辑很简单，实际上是遍历子虚拟节点，递归调用 `createElm`，这是一种常用的深度优先的遍历算法，这里要注意的一点是在遍历过程中会把 `vnode.elm` 作为父容器的 DOM 节点占位符传入。
+
+```js
+createChildren(vnode, children, insertedVnodeQueue)
+
+function createChildren (vnode, children, insertedVnodeQueue) {
+  if (Array.isArray(children)) {
+    if (process.env.NODE_ENV !== 'production') {
+      checkDuplicateKeys(children)
+    }
+    for (let i = 0; i < children.length; ++i) {
+      createElm(children[i], insertedVnodeQueue, vnode.elm, null, true, children, i)
+    }
+  } else if (isPrimitive(vnode.text)) {
+    nodeOps.appendChild(vnode.elm, nodeOps.createTextNode(String(vnode.text)))
+  }
+}
+```
+
+
+
+`insert` 方法把DOM数插入到父节点中
+
+- 因为是递归调用，子元素会优先调用 `insert`，所以整个 `vnode` 树节点的插入顺序是先子后父。
+
+```js
+insert(parentElm, vnode.elm, refElm)
+
+function insert (parent, elm, ref) {
+  if (isDef(parent)) {
+    if (isDef(ref)) {
+      if (ref.parentNode === parent) {
+        nodeOps.insertBefore(parent, elm, ref)
+      }
+    } else {
+      nodeOps.appendChild(parent, elm)
+    }
+  }
+}
+```
+
+
+
+#### 总结
+
+在 `createElm` 过程中，如果 `vnode` 节点不包含 `tag`，则它有可能是一个注释或者纯文本节点，可以直接插入到父元素中。在我们这个例子中，最内层就是一个文本 `vnode`，它的 `text` 值取的就是之前的 `this.message` 的值 `Hello Vue!`。
+
+再回到 `patch` 方法，首次渲染我们调用了 `createElm` 方法，这里传入的 `parentElm` 是 `oldVnode.elm` 的父元素，在我们的例子是 id 为 `#app` div 的父元素，也就是 Body；实际上整个过程就是递归创建了一个完整的 DOM 树并插入到 Body 上。
+
+最后，我们根据之前递归 `createElm` 生成的 `vnode` 插入顺序队列，执行相关的 `insert` 钩子函数
+
+
+
+
+
+
+
+### 总结
+
+![](https://ustbhuangyi.github.io/vue-analysis/assets/new-vue.png)
