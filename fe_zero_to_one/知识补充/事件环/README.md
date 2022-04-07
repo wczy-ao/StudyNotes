@@ -401,31 +401,76 @@ node中的事件环和浏览器中的是不一样的，node的事件环分为六
 
 
 
+### 问题
+
+#### setTimeout，setImmediate谁先谁后？
+
+```js
+setTimeout(function(){
+	console.log('Timeout');
+})
+setImmediate(function(){
+	console.log('Immediate');
+})
+// 谁都有可能先执行
+// setTimeout最快也有4ms的延迟，所以没有办法确定这两个谁快，除非是在一个poll阶段中，setImmediate一定先执行；这是因为IO后面就是check阶段先执行setImmediate
+fs.readFile('./1.txt',function(){
+    console.log('fs');
+    setTimeout(function(){
+    	console.log('timeout');
+    });
+    setImmediate(function(){
+    	console.log('setImmediate');
+    });
+})
+
+```
 
 
 
+#### nextTick和promise.then谁快？
+
+```js
+process.nextTick(function () {
+  console.log(4);
+})
+new Promise((resolve, reject) => {
+  resolve(1)
+}).then(val => {
+  console.log(val);
+})
+// 4 1
+```
 
 
 
+#### nextTick和其它的定时器嵌套
+
+```js
+setImmediate(function () {
+  console.log(1);
+  process.nextTick(function () {
+    console.log(4);
+  })
+})
+process.nextTick(function () {
+  console.log(2);
+  setImmediate(function () {
+    console.log(3);
+  })
+  setTimeout(() => {
+    console.log(5);
+  });
+})
+// 2 5 1 4 3
+// 先执行 process.nextTick；然后按着事件环顺序阶段执行
+```
 
 
 
+#### 定时器指定的回调函数一定会在指定的时间内执行吗？
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+不一定，node中事件环六中状态之间转化也需要耗时
 
 
 
