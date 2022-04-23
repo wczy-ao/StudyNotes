@@ -5,7 +5,7 @@
 - DDL（Data Definition Language）：数据定义语言； 
   - 可以通过DDL语句对数据库或者表进行：创建、删除、修改等操作；
 - DML（Data Manipulation Language）：数据操作语言； 
-  - 可以通过DML语句对表进行：添加、删除、修改等操作；据库的操作
+  - 可以通过DML语句对表进行：添加、删除、修改等操作；
 - DQL（Data Query Language）：数据查询语言；
   - 可以通过DQL从数据库中查询记录；**（重点）**
 
@@ -75,6 +75,8 @@
 
 ## DDL
 
+> 对数据库或者表进行：创建、删除、修改等操作
+
 ### 数据库的操作
 
 ```mysql
@@ -120,6 +122,8 @@ DROP TABLE IF EXISTS `teacher`;
 
 ## DML
 
+> 对表进行：添加、删除、修改等操作；
+
 ```mysql
 # DML
 
@@ -162,6 +166,8 @@ UPDATE `user` SET name = 'lily', telPhone = '010-1101133' WHERE id = 112;
 
 
 ## DQL
+
+### 基础
 
 ```mysql
 # 建表
@@ -233,5 +239,60 @@ SELECT * FROM `products` WHERE brand = '华为' or price < 1000 ORDER BY price A
 SELECT * FROM `products` LIMIT 30 OFFSET 0;
 # 另外一种写法：offset, row_count
 SELECT * FROM `products` LIMIT 90, 30;
+```
+
+
+
+### 聚合函数和Group By
+
+`聚合函数`
+
+```mysql
+# 求所有手机价格的总和
+SELECT SUM(price) FROM `products`;
+# 别名
+SELECT SUM(price) totalPrice FROM `products`;
+
+# 求华为手机价格的总和
+SELECT SUM(price) FROM `products` WHERE brand = '华为';
+# 求华为手机平均价格
+SELECT brand, AVG(price) FROM `products` WHERE brand = '华为';
+
+# 最大值
+SELECT MAX(price) FROM `products`;
+# 最小值
+SELECT MIN(price) FROM `products`;
+
+# 手机个数
+SELECT COUNT(*) FROM `products`;
+SELECT COUNT(*) FROM `products` WHERE brand = '华为';
+SELECT COUNT(url) FROM `products`;
+SELECT COUNT(price) FROM `products`;
+
+# 价格去重
+SELECT COUNT(DISTINCT price) FROM `products`;
+```
+
+
+
+`Group By`
+
+> GROUP BY 后面不能使用 WHERE、可以在前面使用、因为 WHERE 是表的逻辑判断、GROUP BY是分组之后的结果
+
+``` mysql
+# 报错
+SELECT AVG(price) FROM `products`GROUP BY brand  WHERE brand = '华为';   
+```
+
+> 可以先使用 WHERE 过滤，再分组
+
+``` mysql
+SELECT AVG(price) FROM `products` WHERE brand = '华为' GROUP BY brand;
+```
+
+> **HAVING的使用、对分组后的结果再筛选**
+
+``` mysql
+SELECT brand, AVG(price) avgPrice, COUNT(*), AVG(score) FROM `products` GROUP BY brand HAVING avgPrice > 2000;
 ```
 
