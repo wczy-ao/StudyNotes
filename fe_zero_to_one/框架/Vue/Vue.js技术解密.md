@@ -1,6 +1,27 @@
 # Vue.js 技术解密
 
-[TOC]
+- [Vue.js 技术解密](#vuejs-技术解密)
+  - [1：准备工作](#1准备工作)
+    - [Vue.js 源码设计目录](#vuejs-源码设计目录)
+      - [compiler](#compiler)
+      - [core](#core)
+      - [platform](#platform)
+      - [server](#server)
+      - [sfc](#sfc)
+    - [Vue源码构建](#vue源码构建)
+      - [Runtime Only VS Runtime + Compiler](#runtime-only-vs-runtime--compiler)
+        - [两者执行步骤](#两者执行步骤)
+  - [2：数据驱动](#2数据驱动)
+    - [new Vue 发生了什么](#new-vue-发生了什么)
+    - [Vue实例挂载](#vue实例挂载)
+      - [原先原型上的 `$mount` 方法](#原先原型上的-mount-方法)
+    - [render函数](#render函数)
+    - [Vnode](#vnode)
+    - [createElement](#createelement)
+      - [总结](#总结)
+    - [update](#update)
+      - [总结](#总结-1)
+    - [总结](#总结-2)
 
 [Vue.js 技术解密](https://ustbhuangyi.github.io/vue-analysis/)
 
