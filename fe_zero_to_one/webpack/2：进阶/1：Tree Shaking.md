@@ -72,22 +72,3 @@ module.exports = {
 
 ```
 
-- tree shaking 只支持ES Moudle
-- sideEffects 明确告诉哪些文件不执行tree Skaing
-
-- 生产环境默认tree shaking
-
-
-
-
-
-- 打包模式，开发环境和生产环境用不同的配置
-- 修改执行命令  - - config  wepack.dev.js
-- webpack-merge 合并不同环境配置
-
-
-
-- 代码分割；依赖单独放在一个文件引入，直接挂载到window上
-- optimization
-  - splitChunks：会自动区分模块代码，有的会单独生成一个js文件，有的模块不会
-- 动态y引入也可以执行代码分割
