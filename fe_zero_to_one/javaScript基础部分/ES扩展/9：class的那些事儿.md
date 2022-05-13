@@ -160,7 +160,7 @@ obj.goo();
 
 1. ES5 的继承机制，是先创造一个独立的子类的实例对象，然后再将父类的方法添加到这个对象上面，即“实例在前，继承在后”。
 
-   - 执行 var child1 = new Child() 时，构造函数内部是有 this 的，这个this 就是实例对象；所以是实例在前
+   - 先实例父级，再继承
 
    ```js
    function Parent () {
@@ -170,6 +170,7 @@ obj.goo();
    function Child () {
        this.age = 18
        Parent.call(this);
+       // Parent.call(this) 的底层就是 Child.prototype = new Parent(1,2);
    }
    
    var child1 = new Child();
