@@ -1,4 +1,6 @@
-安装
+# 脚手架开发
+
+## 安装
 
 ```
 npm install -g create-react-app
@@ -10,7 +12,9 @@ npm install -g create-react-app
 create-react-app --version
 ```
 
-报错：`react中-create-react-app不是内部或者外部命令...-解决方案/`
+报错：
+
+`react中-create-react-app不是内部或者外部命令...-解决方案/`
 
 ```
 执行下面这个
@@ -59,7 +63,7 @@ export default class App extends Component {
 }
 ```
 
-render函数返回的值有哪些
+### render函数返回的值有哪些
 
 - React 元素：
   - 通常通过 JSX 创建
@@ -92,7 +96,7 @@ export default function App() {
 
 函数式组件没有生命周期函数，通产说的生命周期函数都是针对类组件的
 
-![image-20220517145109500](C:/Users/wanzh/AppData/Roaming/Typora/typora-user-images/image-20220517145109500.png)
+![](images/image-20220517145109500.png)
 
 1. 挂载阶段--执行顺序
    1. 先执行 `constructor`
