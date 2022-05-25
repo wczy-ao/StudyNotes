@@ -418,3 +418,782 @@ age.value++ // 这个修改、state中的age也会改变
 
 
 #### watchEffect 执行时机
+
+执行时机与第二个参数有关、第二个参数默认是一个对象、`{flush: "pre"}`  
+
+- flush属性值默认是 pre 时、它会在元素 挂载 或者 更新 之前执行
+- flush属性值是 post时、它会在元素 挂载后
+- flush属性值是 async时、强制效果始终同步触发。然而，这是低效的，应该很少需要
+
+```
+<template>
+  <div>
+    <h2 ref="title">哈哈哈</h2>
+  </div>
+</template>
+
+<script>
+  import { ref, watchEffect } from 'vue';
+
+  export default {
+    setup() {
+      const title = ref(null);
+
+      watchEffect(() => {
+        console.log(title.value);
+      }, {
+        flush: "pre" // pre post asyncW
+      })
+
+      return {
+        title
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+### watch
+
+watch的API和Vue2一样
+
+- watch需要侦听特定的数据源，并在回调函数中执行副作用
+- 默认情况下它是惰性的，只有当被侦听的源发生变化时才会执行回调；
+
+与watchEffect的比较，watch允许我们：
+
+- 第一次不会直接执行
+- 访问侦听状态变化前后的值；
+
+
+
+#### 监听方式
+
+两种监听方式、监听单个与监听多个
+
+#### 监听单个
+
+1. 一个getter函数：但是**该getter函数必须引用可响应式的对象**（比如reactive或者ref）
+2. 一个可响应式的对象，reactive或者ref
+   - 如果是reactive、那么监听的新旧值都是reactive对象
+   - 如果是ref、那么监听的新旧值都是ref.value 值
+
+```vue
+<template>
+  <div>
+    <h2 ref="title">{{info.name}}</h2>
+    <button @click="changeData">修改数据</button>
+  </div>
+</template>
+
+<script>
+  import { ref, reactive, watch } from 'vue';
+
+  export default {
+    setup() {
+      const info = reactive({name: "why", age: 18});
+
+      // 1.侦听watch时,传入一个getter函数
+      // watch(() => info.name, (newValue, oldValue) => {
+      //   console.log("newValue:", newValue, "oldValue:", oldValue);
+      // })
+
+      // 2.传入一个可响应式对象: reactive对象/ref对象
+      watch(info, (newValue, oldValue) => {
+        console.log("newValue:", newValue, "oldValue:", oldValue);
+      })
+        
+      // const name = ref("why");
+      // watch(name, (newValue, oldValue) => {
+      //   console.log("newValue:", newValue, "oldValue:", oldValue);
+      // })
+
+      const changeData = () => {
+        info.name = "kobe";
+      }
+
+      return {
+        changeData,
+        info
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+#### 监听多个
+
+使用数组同时监听多个源
+
+```vue
+<template>
+  <div>
+    <h2 ref="title">{{info.name}}</h2>
+    <button @click="changeData">修改数据</button>
+  </div>
+</template>
+
+<script>
+  import { ref, reactive, watch } from 'vue';
+
+  export default {
+    setup() {
+      // 1.定义可响应式的对象
+      const name = ref("why");
+      const age = ref(18);
+
+      
+      watch([age,name],(newValue,oldValue)=>{
+        console.log(newValue,oldValue);
+      })
+      const changeData = () => {
+        age.value++
+        name.value = "kobe"
+      }
+
+      return {
+        changeData,
+        info
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+监听对象和数组
+
+```vue
+<template>
+  <div>
+    <h2 ref="title">{{info.name}}</h2>
+    <button @click="changeData">修改数据</button>
+  </div>
+</template>
+
+<script>
+  import { ref, reactive, watch } from 'vue';
+
+  export default {
+    setup() {
+      // 1.定义可响应式的对象
+      const info = reactive({name: "why", age: 18});
+      const name = ref("why");
+
+      // 2.侦听器watch
+      watch([() => ({...info}), name], ([newInfo, newName], [oldInfo, oldName]) => {
+        console.log(newInfo, newName, oldInfo, oldName);
+      })
+
+      const changeData = () => {
+        info.name = "kobe";
+      }
+
+      return {
+        changeData,
+        info
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+## 生命周期
+
+剔除了 `vue2` 的 `beforeCreated`、`created`；其他的变成了 `onX` 函数注册的生命周期钩子；**不需要前两个是因为setup代替了前两个钩子、在之前两个钩子函数中做的事情都可以放到 setup 中去做**
+
+```vue
+<template>
+  <div>
+    <button @click="increment">{{counter}}</button>
+  </div>
+</template>
+
+<script>
+  import { onMounted, onUpdated, onUnmounted, ref } from 'vue';
+
+  export default {
+    setup() {
+      const counter = ref(0);
+      const increment = () => counter.value++
+	  // 多个钩子重复不会被覆盖
+      onMounted(() => {
+        console.log("App Mounted1");
+      })
+      onMounted(() => {
+        console.log("App Mounted2");
+      })
+      onUpdated(() => {
+        console.log("App onUpdated");
+      })
+      onUnmounted(() => {
+        console.log("App onUnmounted");
+      })
+
+      return {
+        counter,
+        increment
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+## Provide函数
+
+替代之前的Provide 和 Inject 的选项、参数可以看成是键值对模式
+
+```vue
+<template>
+  <div>
+    <home/>
+    <h2>App Counter: {{counter}}</h2>
+    <button @click="increment">App中的+1</button>
+  </div>
+</template>
+
+<script>
+  import { provide, ref, readonly } from 'vue';
+
+  import Home from './Home.vue';
+
+  export default {
+    components: {
+      Home
+    },
+    setup() {
+      const name = ref("coderwhy");
+      let counter = ref(100);
+
+      provide("name", readonly(name));
+      provide("counter", readonly(counter));
+
+      const increment = () => counter.value++;
+
+      return {
+        increment,
+        counter
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+```vue
+<template>
+  <div>
+    <h2>{{name}}</h2>
+    <h2>{{counter}}</h2>
+
+    <button @click="homeIncrement">home+1</button>
+  </div>
+</template>
+
+<script>
+  import { inject } from 'vue';
+
+  export default {
+    setup() {
+      const name = inject("name");
+      const counter = inject("counter");
+
+      const homeIncrement = () => counter.value++
+
+      return {
+        name,
+        counter,
+        homeIncrement
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+## hook
+
+> 我自己认为hook方式就是让代码看起来简洁、就像之前引入工具函数一样。没有必要什么都在一个组件下面写；其中最不一样的就是、hook中的数据具有响应式
+
+hook中的数据具有响应式、导出去再在组件中导进来
+
+```js
+// useCount.js
+import { ref, computed } from 'vue';
+
+export default function() {
+  const counter = ref(0);
+  const doubleCounter = computed(() => counter.value * 2);
+
+  const increment = () => counter.value++;
+  const decrement = () => counter.value--;
+
+  return {
+    counter, 
+    doubleCounter, 
+    increment, 
+    decrement
+  }
+}
+
+// App.vue
+setup() {
+    const {counter, doubleCounter, increment, decrement } = useCount()
+    
+    ......
+   
+   	return {counter, doubleCounter, increment, decrement }
+}
+```
+
+
+
+
+
+## 顶层setup
+
+目前稳定版本没有、不要再项目中使用<script setup>
+
+- <script setup> 开头
+
+- 不是 `export default function`
+
+- 组件只需要引入、不需要注册
+
+```vue
+<template>
+  <div>
+    <h2>当前计数: {{counter}}</h2>
+    <button @click="increment">+1</button>
+
+    <hello-world message="呵呵呵" @increment="getCounter"></hello-world>
+  </div>
+</template>
+
+<script setup>
+  import { ref } from 'vue';
+  import HelloWorld from './HelloWorld.vue';
+
+  const counter = ref(0);
+  const increment = () => counter.value++;
+
+  const getCounter = (payload) => {
+    console.log(payload);
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+
+<template>
+  <div>
+    <h2>Hello World</h2>
+    <h2>{{message}}</h2>
+    <button @click="emitEvent">发射事件</button>
+  </div>
+</template>
+
+<script setup>
+  // 顶层自带这两个、可以不用引入
+  // import { defineProps, defineEmit } from 'vue';
+
+  const props = defineProps({
+    message: {
+      type: String,
+      default: "哈哈哈"
+    }
+  })
+
+  const emit = defineEmits(["increment", "decrement"]);
+
+  const emitEvent = () => {
+    emit('increment', "100000")
+  }
+  
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+## h函数
+
+h() 函数是一个用于创建 vnode 的一个函数
+
+接受三个参数：
+
+1. 一个html标签名、一个组件、一个异步组件、一个函数式、或者一个函数式组件
+2. attribute、props属性
+3. 文本或者插槽对象
+
+```vue
+<script>
+  import { ref, h } from 'vue';
+
+  export default {
+    setup() {
+      const counter = ref(0);
+      
+      return () => {
+        return h("div", {class: "app"}, [
+          h("h2", null, `当前计数: ${counter.value}`),
+          h("button", {
+            onClick: () => counter.value++
+          }, "+1"),
+          h("button", {
+            onClick: () => counter.value--
+          }, "-1"),
+        ])
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+插槽形式
+
+```vue
+<script>
+  import { h } from 'vue';
+  import HelloWorld from './HelloWorld.vue';
+
+  export default {
+    render() {
+      return h("div", null, [
+        h(HelloWorld, null, {
+          default: props => h("span", null, `app传入到HelloWorld中的内容: ${props.name}`)
+        })
+      ])
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+
+<script>
+  import { h } from "vue";
+
+  export default {
+    render() {
+      return h("div", null, [
+        h("h2", null, "Hello World"),
+        this.$slots.default ? this.$slots.default({name: "coderwhy"}): h("span", null, "我是HelloWorld的插槽默认值")
+      ])
+    }
+  }
+</script>
+
+<style lang="scss" scoped>
+
+</style>
+```
+
+
+
+
+
+## 自定义钩子
+
+### 默认实现
+
+```vue
+<template>
+  <div>
+    <input type="text" ref="input">
+  </div>
+</template>
+
+<script>
+  import { ref, onMounted, watchEffect } from "vue";
+
+  export default {
+    setup() {
+      const input = ref(null);
+
+      onMounted(() => {
+        input.value.focus();
+      })
+      // 两种实现方式
+      watchEffect(()=>{
+        input.value.focus()
+      },{
+        flush:"post"
+      })
+
+      return {
+        input
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+### 局部指令
+
+提供了 `directives` 选项、钩子函数参数的bindings可以拿到指令的修饰符和绑定值
+
+```vue
+<template>
+  <div>
+    <button v-if="counter < 2" v-why.aaaa.bbbb="'coderwhy'" @click="increment">当前计数: {{counter}}</button>
+  </div>
+</template>
+
+<script>
+  import { ref } from "vue";
+
+  export default {
+    // 局部指令
+    directives: {
+      why: {
+        created(el, bindings, vnode, preVnode) {
+          console.log("why created",{ el, bindings, vnode, preVnode});
+          console.log(bindings.value);
+          console.log(bindings.modifiers);
+        },
+        beforeMount() {
+          console.log("why beforeMount");
+        },
+        mounted() {
+          console.log("why mounted");
+        },
+        beforeUpdate() {
+          console.log("why beforeUpdate");
+        },
+        updated() {
+          console.log("why updated");
+        },
+        beforeUnmount() {
+          console.log("why beforeUnmount");
+        },
+        unmounted() {
+          console.log("why unmounted");
+        }
+      }
+    },
+    setup() {
+      const counter = ref(0);
+      const increment = () => counter.value++;
+
+      return {
+        counter,
+        increment
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+### 全局指令
+
+全局指令通过 `directive` 实现
+
+```vue
+import dayjs from 'dayjs';
+
+export default function(app) {
+  app.directive("format-time", {
+    created(el, bindings) {
+      bindings.formatString = "YYYY-MM-DD HH:mm:ss";
+      if (bindings.value) {
+        bindings.formatString = bindings.value;
+      }
+    },
+    mounted(el, bindings) {
+      const textContent = el.textContent;
+      let timestamp = parseInt(textContent);
+      if (textContent.length === 10) {
+        timestamp = timestamp * 1000
+      }
+      el.textContent = dayjs(timestamp).format(bindings.formatString);
+    }
+  })
+}
+
+<template>
+  <h2 v-format-time="'YYYY/MM/DD'">{{timestamp}}</h2>
+
+  <h2 v-format-time>{{timestamp}}</h2>
+  <h2 v-format-time>{{timestamp}}</h2>
+  <h2 v-format-time>{{timestamp}}</h2>
+  <h2 v-format-time>{{timestamp}}</h2>
+  <h2 v-format-time>{{timestamp}}</h2>
+
+</template>
+
+<script>
+  export default {
+    setup() {
+      const timestamp = 1624452193;
+
+      return {
+        timestamp
+      }
+    },
+    mounted() {
+      console.log("app mounted");
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+
+
+## Teleport
+
+平时写代码都是一层套一层的、teleport可以让我们跳出当前DOM、它会创建一个新的DOM出来
+
+```vue
+<template>
+  <div class="app">
+    <teleport to="#why">
+      <h2>当前计数</h2>
+      <button>+1</button>
+      <hello-world></hello-world>
+    </teleport>
+
+    <teleport to="#why">
+      <span>呵呵呵呵</span>
+    </teleport>
+  </div>
+</template>
+
+<script>
+  import HelloWorld from './HelloWorld.vue';
+  export default {
+    components: {
+      HelloWorld
+    },
+  }
+</script>
+
+```
+
+![image-20220525153021229](Vue.js技术揭秘思维导图/image-20220525153021229.png)
+
+
+
+## Vue插件
+
+向Vue全局添加一些功能时，会采用插件的模式，它有两种编写方式
+
+- 对象类型：一个对象，但是**必须包含一个 install 的函数**，该函数会在安装插件时执行
+- 函数类型：一个function，这个函数会在安装插件时自动执行；
+
+插件可以完成的功能没有限制、以下都可以实现：
+
+1. 添加全局方法或者 property，通过把它们添加到 config.globalProperties 上实现
+2. 一个库，提供自己的 API，同时提供上面提到的一个或多个功能
+3. 添加全局资源：指令/过滤器/过渡等
+4. 通过全局 mixin 来添加一些组件选项
+
+```js
+// pluginObject.js
+export default {
+  install(app) {
+    app.config.globalProperties.$name = "coderwhy"
+  }
+}
+// pluginFunction.js
+export default function(app) {
+  console.log(app);
+}
+
+// main.js
+import { createApp } from 'vue'
+import App from './04_teleport内置组件/App.vue'
+import pluginObject from './plugins/plugins_object'
+import pluginFunction from './plugins/plugins_function'
+
+const app = createApp(App);
+
+app.use(pluginObject); // 全局注册
+app.use(pluginFunction); // 全局注册
+
+app.mount('#app');
+
+```
+
