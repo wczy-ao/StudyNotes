@@ -18,6 +18,20 @@
 
 
 
+#### 补充
+
+路由页面不刷新的原因：
+
+- hash模式：, 本质上是改变window.location的href属性、这个不会刷新页面
+
+- history模式：history接口是HTML5新增的,提供了六种模式改变URL而不刷新页面
+  - replaceState：替换原来的路径
+  - pushState：使用新的路径
+  - popState：路径的回退
+  - go：向前或向后改变路径
+  - forward：向前改变路径
+  - back：向后改变路径
+
 #### 1：创建路由
 
 - 导入路由

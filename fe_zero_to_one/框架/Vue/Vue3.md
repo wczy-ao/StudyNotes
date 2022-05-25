@@ -1197,3 +1197,29 @@ app.mount('#app');
 
 ```
 
+
+
+**在组件中拿到全局app的属性需要另一个api**  `getCurrentInstance`
+
+```vue
+<template>
+  <div class="app">
+  </div>
+</template>
+
+<script>
+  import { getCurrentInstance } from "vue";
+
+
+  export default {
+    components: {
+      HelloWorld
+    },
+    setup() {
+      const instance = getCurrentInstance();
+      console.log(instance.appContext.config.globalProperties.$name);
+    },
+  }
+</script>
+```
+
