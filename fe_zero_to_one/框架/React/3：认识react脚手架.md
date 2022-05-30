@@ -444,7 +444,7 @@ render() {
 
 React 组件也可以订阅到 context 变更。这能让你在 函数式组件 中完成订阅 context
 
-- 这里需要 函数作为子元素（function as child）这种做法
+- 这里需要 **函数作为子元素**（function as child）这种做法
 - 这个函数接收当前的 context 值，返回一个 React 节点
 
 ```jsx
