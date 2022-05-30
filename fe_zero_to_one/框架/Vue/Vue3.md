@@ -629,6 +629,8 @@ watch的API和Vue2一样
 
 剔除了 `vue2` 的 `beforeCreated`、`created`；其他的变成了 `onX` 函数注册的生命周期钩子；**不需要前两个是因为setup代替了前两个钩子、在之前两个钩子函数中做的事情都可以放到 setup 中去做**
 
+这些函数接受一个回调函数，当钩子被组件调用时将会被执行:
+
 ```vue
 <template>
   <div>
@@ -1221,5 +1223,274 @@ app.mount('#app');
     },
   }
 </script>
+```
+
+
+
+
+
+## Vuex的使用
+
+先简单介绍下vuex
+
+### Vuex在vue2中的的使用
+
+#### 创建
+
+```js
+import { createStore } from "vuex"
+const store = createStore({
+	state(){
+		return {
+			count: 0 // 数据
+		}
+	},
+	getters: {
+        // 类似于计算属性
+        dobuleCount(state, getters){
+            return state.count * 2
+        }
+	},
+	mutations: {
+		// 同步方法、playload就是commit过来的参数
+        increment(state,playload)
+            state.count++
+        }
+	},
+	actions: {
+    	// 异步操作、获取到数据在这里执行commit改变state中的数据
+                          
+        // context 与 store类似；playload参数
+        decrementAction(context, playload)
+    		axios(url).then(res => {
+                context.commit('decrement', res)
+            })
+    		
+		}
+	
+	}
+})
+
+export default store;
+
+// main.js
+import store from './store'
+createApp(App).use(store).mount('#app')
+```
+
+
+
+#### 使用
+
+- 改变state的值、只能靠`$store.commit`去执行
+
+```vue
+<template>
+  <home/>
+  <h2>App:{{ $store.state.counter }}</h2>
+  <h2>Getters:{{ $store.getters.dobuleCount }}</h2>
+  <button @click="increment">+1</button>
+  <button @click="decrement">-1</button>
+</template>
+
+<script>
+import Home from './pages/Home.vue'
+
+export default {
+  name: "App",
+  components: {
+    Home
+  },
+  methods: {
+    increment() {
+      this.$store.commit("increment")
+    },
+    decrement() {
+      this.$store.commit("decrement")
+    },
+     decretmentAction() {
+       this.$store.dispatch("decrementAction")
+     }
+     
+  },
+};
+</script>
+
+<style>
+#app {
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 60px;
+}
+</style>
+
+```
+
+
+
+#### 辅助函数
+
+##### mapState、mapGetters、mapActions
+
+两种使用方式：数组和对象；`mapState / mapGetters / mapActions` 返回一个对象、对象中的属性值都是computeed函数
+
+```vue
+<template>
+  <div>
+    <h2>Home:{{ $store.state.counter }}</h2>
+    <h2>Home:{{ sCounter }}</h2>
+    <h2>Home:{{ sName }}</h2>
+    <h2>Home:{{ age }}</h2>
+    <h2>Home:{{ height }}</h2>
+    <button @click="incrementAction">提交</h2>
+  </div>
+</template>
+
+<script>
+  import { mapState, mapGetters } from 'vuex'
+
+  export default {
+    computed: {
+      fullName() {
+        return "Kobe Bryant"
+      },
+      // 其他的计算属性, 从state获取
+      ...mapState(["counter", "name", "age", "height"])
+      // 解构就会变成下面这种、this就是 store
+      counter: function() {
+      	return this.state.counter
+  	  }
+    
+    
+      ...mapState({
+        sCounter: state => state.counter,
+        sName: state => state.name
+      })
+    
+      ...mapGetters(["nameInfo", "ageInfo", "heightInfo"]),
+      ...mapGetters({
+        sNameInfo: "nameInfo",
+        sAgeInfo: "ageInfo"
+      })
+    },
+    methods: {
+        ...mapActions(["incrementAction", "decrementAction"])
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+
+
+### Vuex在Vue3中的使用
+
+Vue3中没有this、但却提供了 `useStore` 让我们获取 `store` 对象
+
+- 少部分就可以用`computed`获取
+
+- 大部分的值需要辅助函数、在上面我们知道`mapState`返回的对象还是需要 `this` 的、所以用`bind`显示绑定 `this` 、再用`computed`返回
+
+```vue
+<template>
+  <div>
+    <h2>Home:{{ $store.state.counter }}</h2>
+    <hr>
+    <h2>{{sCounter}}</h2>
+    <h2>{{counter}}</h2>
+    <h2>{{name}}</h2>
+    <h2>{{age}}</h2>
+    <h2>{{height}}</h2>
+    <hr>
+  </div>
+</template>
+
+<script>
+  import { mapState, useStore, mapActions  } from 'vuex'
+  import { computed } from 'vue'
+
+  export default {
+
+    setup() {
+      const store = useStore()
+      // 少部分就可以用computed获取
+      const sCounter = computed(() => store.state.counter)
+      const sName = computed(() => store.state.name)
+
+      
+      // 大部分的值需要辅助函数、在上面我们知道mapState返回的对象还是需要this的、所以用bind显示绑定 this 、再用computed返回
+      const storeStateFns = mapState(["counter", "name", "age", "height"])
+
+      const storeState = {}
+      Object.keys(storeStateFns).forEach(fnKey => {
+        const fn = storeStateFns[fnKey].bind({$store: store})
+        storeState[fnKey] = computed(fn)
+      })
+        
+       // store 中的 action 函数
+       const actions = mapActions(["incrementAction", "decrementAction"])
+
+      return {
+        sCounter,
+        ...storeState,
+        ...actions
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+```
+
+
+
+#### 辅助函数 hook 用法
+
+```js
+// useGetters.js
+import { computed } from 'vue'
+import { mapGetters, useStore } from 'vuex'
+
+export function useGetters(mapper) {
+  // 拿到store独享
+  const store = useStore()
+
+  // 获取到对应的对象的functions: {name: function, age: function}
+  const storeStateFns = mapGetters(mapper)
+
+  // 对数据进行转换
+  const storeState = {}
+  Object.keys(storeStateFns).forEach(fnKey => {
+    const fn = storeStateFns[fnKey].bind({$store: store})
+    storeState[fnKey] = computed(fn)
+  })
+
+  return storeState
+}
+
+// app.vue
+setup() {
+  const storeState = useState(["counter", "name", "age", "height"])
+  const storeState2 = useState({
+     sCounter: state => state.counter,
+     sName: state => state.name
+  })
+
+  return {
+    ...storeState,
+    ...storeState2
+  }
+}
+
 ```
 
