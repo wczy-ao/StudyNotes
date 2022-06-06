@@ -119,3 +119,264 @@ store.dispatch(action3);
 store.dispatch(action4);
 ```
 
+
+
+## 在组件中使用redux
+
+1. `store.subscribe` 返回的函数再次执行可以取消订阅、与`Vue3`中的`watchEffect`一样
+
+```jsx
+import React, { PureComponent } from 'react';
+
+import store from '../store';
+import { 
+  subAction
+} from "../store/actionCreators";
+
+export default class About extends PureComponent {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      counter: store.getState().counter
+    }
+  }
+
+  componentDidMount() {
+    this.unsubscribue = store.subscribe(() => {
+      this.setState({
+        counter: store.getState().counter
+      })
+    })
+  }
+
+  componentWillUnmount() {
+    this.unsubscribue();
+  }
+
+  render() {
+    return (
+      <div>
+        <hr/>
+        <h1>About</h1>
+        <h2>当前计数: {this.state.counter}</h2>
+        <button onClick={e => this.decrement()}>-1</button>
+        <button onClick={e => this.subNumber(5)}>-5</button>
+      </div>
+    )
+  }
+
+  decrement() {
+    store.dispatch(subAction(1));
+  }
+
+  subNumber(num) {
+    store.dispatch(subAction(num));
+  }
+} 
+```
+
+
+
+
+
+## 自定义`connect`函数
+
+React-Redux将所有组件分为两大类：展示组件（UI组件），容器组件、connect方法就是将两者连接起来
+
+**展示组件的特征**
+
+- 只负责 UI 的呈现，不带有任何业务逻辑
+- 没有状态（即不使用`this.state`这个变量）
+- 所有数据都由参数（`this.props`）提供
+- 不使用任何 Redux 的 API
+
+
+
+**容器组件有以下几个特征：**
+
+- 负责管理数据和业务逻辑，不负责 UI 的呈现
+- 带有内部状态
+- 使用 Redux 的 API
+
+
+
+**connect方法解析**
+
+- `mapStateToProps`必须是`function`,作为输入逻辑，
+- `mapDispatchToProps`可以是`funciton`,也可以是对象，作为输出，
+
+```js
+// connect 方法
+
+import React, { PureComponent } from "react";
+
+// import { StoreContext } from './context';
+import store from "../store";
+
+export function connect(mapStateToProps, mapDispachToProp) {
+  return function enhanceHOC(WrappedComponent) {
+    class EnhanceComponent extends PureComponent {
+      constructor(props) {
+        super(props);
+
+        this.state = {
+          storeState: mapStateToProps(store.getState())
+        }
+      }
+
+      componentDidMount() {
+        this.unsubscribe = store.subscribe(() => {
+          this.setState({
+            storeState: mapStateToProps(store.getState())
+          })
+        })
+      }
+
+      componentWillUnmount() {
+        this.unsubscribe();
+      }
+
+      render() {
+        return <WrappedComponent {...this.props}
+          {...mapStateToProps(store.getState())}
+          {...mapDispachToProp(store.dispatch)} />
+      }
+    }
+
+    return EnhanceComponent;
+  }
+}
+```
+
+
+
+```jsx
+// ui 组件
+
+import React from 'react';
+import { connect } from '../utils/connect';
+
+import { 
+  decAction,
+  subAction
+} from "../store/actionCreators";
+
+function About(props) {
+  return (
+    <div>
+      <hr />
+      <h1>About</h1>
+      <h2>当前计数: {props.counter}</h2>
+      <button onClick={e => props.decrement()}>-1</button>
+      <button onClick={e => props.subNumber(5)}>-5</button>
+    </div>
+  )
+}
+
+const mapStateToProps = state => {
+  return {
+    counter: state.counter
+  }
+};
+const mapDispatchToProps = dispatch => {
+  return {
+    decrement: function() {
+      dispatch(decAction());
+    },
+    subNumber: function(num) {
+      dispatch(subAction(num))
+    }
+  }
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(About);
+```
+
+
+
+## react-redux中的connect
+
+虽然我们之前已经实现了connect、Provider这些帮助我们完成连接redux、react的辅助工具，但是实际上redux官方帮助我们 提供了 react-redux 的库，可以直接在项目中使用，并且实现的逻辑会更加的严谨和高效。
+
+```jsx
+// src/index.js
+import { Provider } from 'react-redux';
+ReactDOM.render(
+    // 这里用的是store、前面通过context来传值、用的是value
+  <Provider store={store}>
+    <App />
+  </Provider>,
+  document.getElementById('root')
+);
+```
+
+```jsx
+import React from 'react';
+import { connect } from 'react-redux';
+
+import {
+  decAction,
+  subAction
+} from "../store/actionCreators";
+
+function About(props) {
+  console.log("About页面重新渲染了");
+  return (
+    <div>
+      <hr />
+      <h1>About</h1>
+      {/* <h2>当前计数: {props.counter}</h2> */}
+      <button onClick={e => props.decrement()}>-1</button>
+      <button onClick={e => props.subNumber(5)}>-5</button>
+      <h1>Banner</h1>
+      <ul>
+        {
+          props.banners.map((item, index) => {
+            return <li key={item.acm}>{item.title}</li>
+          })
+        }
+      </ul>
+      <h1>Recommend</h1>
+      <ul>
+        {
+          props.recommends.map((item, index) => {
+            return <li key={item.acm}>{item.title}</li>
+          })
+        }
+      </ul>
+    </div>
+  )
+}
+
+const mapStateToProps = state => {
+  return {
+    banners: state.banners,
+    recommends: state.recommends
+  }
+};
+
+const mapDispatchToProps = dispatch => {
+  return {
+    decrement: function () {
+      dispatch(decAction());
+    },
+    subNumber: function (num) {
+      dispatch(subAction(num))
+    }
+  }
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(About);
+```
+
+
+
+## 总结
+
+先到现在、我认为核心思想还是redux的工作流程
+
+- action只能是对象、当然形式可以有多种、通常是函数返回出来的
+- dispatch里的参数一定是action对象、然后就会进入reducer纯函数中进行数据处理
+- connect 其实是一个高阶函数、返回了一个高阶组件函数
+- connect方法的两个参数、一个用来存储数据的对象、一个用来存储操作的对象**（函数执行后返回的都是对象）**
